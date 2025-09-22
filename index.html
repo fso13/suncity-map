@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивная карта</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Интерактивная карта</h1>
+        </header>
+        
+        <main>
+            <div class="map-container">
+                <div class="map-controls">
+                    <div class="coordinates-display">
+                        <span id="cursor-coords">X: 0%, Y: 0%</span>
+                    </div>
+                </div>
+                <div class="map-wrapper">
+                    <div class="map-inner">
+                        <img src="map.png" alt="Карта" id="map-image" usemap="#objectMap">
+                        <map name="objectMap" id="objectMap"></map>
+                        <div id="map-overlay"></div>
+                        <div id="click-marker" class="click-marker"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="filters">
+                    <input type="text" id="search" placeholder="Поиск...">
+                    <select id="filter-type">
+                        <option value="all">Все объекты</option>
+                        <option value="location">Области</option>
+                        <option value="character">Персонажи</option>
+                    </select>
+                </div>
+                
+                <div class="lists">
+                    <div class="objects-list">
+                        <h3>Объекты</h3>
+                        <ul id="objects-container"></ul>
+                    </div>
+                    
+                    <div class="characters-list">
+                        <h3>Персонажи</h3>
+                        <ul id="characters-container"></ul>
+                    </div>
+                </div>
+                
+                <div class="coordinates-panel">
+                    <h3>Последние клики</h3>
+                    <div id="click-history"></div>
+                </div>
+            </div>
+        </main>
+        
+        <div id="popup" class="popup">
+            <div class="popup-content">
+                <span class="close">&times;</span>
+                <h3 id="popup-title"></h3>
+                <p id="popup-description"></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
