@@ -71,6 +71,7 @@ class InteractiveMap {
         const searchTerm = this.currentSearch.toLowerCase().trim();
         const filterType = this.currentFilter;
         
+        console.log(filterType);
         // Фильтрация объектов
         this.filteredObjects = this.objects.filter(obj => 
             obj.name.toLowerCase().includes(searchTerm) &&
@@ -93,6 +94,7 @@ class InteractiveMap {
     renderMapMarkers() {
         if (this.mapWidth === 0 || this.mapHeight === 0) return;
 
+        console.log('1');
         const overlay = document.getElementById('map-overlay');
         
         // Очищаем все маркеры
@@ -107,10 +109,11 @@ class InteractiveMap {
         
         if (hasActiveFilter) {
             overlay.classList.add('filter-active');
-            
+                  console.log('2');
             // Показываем только отфильтрованные маркеры
             this.renderFilteredMarkers();
-        } else {
+        } else 
+            {
             // Показываем все маркеры согласно текущему фильтру
             if (this.currentFilter === 'all' || this.currentFilter === 'location') {
                 overlay.classList.add('objects-visible');
@@ -125,15 +128,18 @@ class InteractiveMap {
     }
 
     renderFilteredMarkers() {
+
         const overlay = document.getElementById('map-overlay');
         
         // Показываем отфильтрованные объекты
         this.filteredObjects.forEach(obj => {
+                  console.log('3');
             this.createObjectMarker(obj, overlay);
         });
         
         // Показываем отфильтрованных персонажей
         this.filteredCharacters.forEach(char => {
+                  console.log('4');
             this.createCharacterMarker(char, overlay);
         });
     }
@@ -153,7 +159,7 @@ class InteractiveMap {
     }
 
     createObjectMarker(obj, overlay) {
-        if (!obj.center) return;
+        //  if (!obj.center) return;
         
         const percentX = (obj.center[0] / this.mapWidth) * 100;
         const percentY = (obj.center[1] / this.mapHeight) * 100;
