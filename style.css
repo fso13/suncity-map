@@ -12,7 +12,7 @@ body {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 5px;
+    padding: 20px;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -20,7 +20,7 @@ body {
 
 header {
     text-align: center;
-    margin-bottom: 5px;
+    margin-bottom: 20px;
 }
 
 header h1 {
@@ -35,10 +35,10 @@ main {
 }
 
 .map-container {
-    flex: 4;
+    flex: 5;
     background: white;
     border-radius: 10px;
-    padding: 5px;
+    padding: 20px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
@@ -48,9 +48,9 @@ main {
 .map-controls {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 10px;
     margin-bottom: 15px;
-    padding: 5px;
+    padding: 10px;
     background: #f8f9fa;
     border-radius: 5px;
     flex-wrap: wrap;
@@ -114,10 +114,11 @@ main {
     display: none;
 }
 
+/* Стили для маркеров объектов */
 .object-marker {
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     background: #007bff;
     border: 2px solid white;
     border-radius: 50%;
@@ -126,42 +127,103 @@ main {
     z-index: 5;
     box-shadow: 0 0 8px rgba(0,123,255,0.5);
     transition: all 0.3s ease;
+    display: none;
 }
 
 .object-marker:hover {
     transform: translate(-50%, -50%) scale(1.2);
     background: #0056b3;
+    z-index: 90;
 }
 
 .object-label {
     position: absolute;
-    background: rgba(255,255,255,0.9);
-    padding: 4px 8px;
+    background: rgba(255,255,255,0.95);
+    padding: 3px 8px;
     border-radius: 3px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     color: #333;
     pointer-events: none;
     z-index: 6;
     white-space: nowrap;
-    transform: translate(-50%, -100%);
-    margin-top: -5px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: none;
 }
 
+/* Стили для маркеров персонажей */
+.character-marker {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #dc3545;
+    border: 2px solid white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 7;
+    box-shadow: 0 0 6px rgba(220,53,69,0.5);
+    transition: all 0.3s ease;
+    display: none;
+}
+
+.character-marker:hover {
+    transform: translate(-50%, -50%) scale(1.4);
+    background: #c82333;
+    z-index: 100;
+}
+
+.character-label {
+    position: absolute;
+    background: rgba(255,255,255,0.95);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: bold;
+    color: #dc3545;
+    pointer-events: none;
+    z-index: 8;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    border: 1px solid #dc3545;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: none;
+}
+
+/* Классы для управления видимостью */
 .objects-visible .object-marker,
 .objects-visible .object-label {
     display: block;
 }
 
-.object-marker,
-.object-label {
-    display: none;
+.characters-visible .character-marker,
+.characters-visible .character-label {
+    display: block;
 }
 
 .filter-active .object-marker,
-.filter-active .object-label {
+.filter-active .object-label,
+.filter-active .character-marker,
+.filter-active .character-label {
     display: none;
+}
+
+/* Стили при наведении */
+.object-marker:hover ~ .object-label,
+.object-label:hover {
+    z-index: 91;
+    background: rgba(255,255,255,1);
+}
+
+.character-marker:hover ~ .character-label,
+.character-label:hover {
+    z-index: 101;
+    background: rgba(255,255,255,1);
 }
 
 .area-highlight {
@@ -326,5 +388,15 @@ li.active {
     
     .map-container, .sidebar {
         flex: none;
+    }
+    
+    .map-controls {
+        flex-wrap: wrap;
+    }
+    
+    .coordinates-display {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
     }
 }
