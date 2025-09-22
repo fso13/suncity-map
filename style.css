@@ -10,9 +10,9 @@ body {
 }
 
 .container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 15px;
+    max-width: 2400px;
+    margin: 0;
+    padding: 5px;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -36,10 +36,10 @@ main {
 }
 
 .map-container {
-    flex: 3;
+    flex: 5;
     background: white;
     border-radius: 8px;
-    padding: 15px;
+    padding: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
@@ -149,7 +149,7 @@ main {
     z-index: 6;
     white-space: nowrap;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    max-width: 120px;
+    /* max-width: 120px; */
     overflow: hidden;
     text-overflow: ellipsis;
     display: none;
@@ -191,7 +191,7 @@ main {
     white-space: nowrap;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     border: 1px solid #dc3545;
-    max-width: 100px;
+    /* max-width: 100px; */
     overflow: hidden;
     text-overflow: ellipsis;
     display: none;
@@ -242,7 +242,7 @@ main {
     min-width: 280px;
     background: white;
     border-radius: 8px;
-    padding: 15px;
+    padding: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
@@ -274,7 +274,7 @@ main {
 
 .lists {
     flex: 1;
-    overflow-y: auto;
+    /* overflow-y: auto; */
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -294,10 +294,10 @@ main {
 }
 
 .objects-list ul, .characters-list ul {
-    flex: 1;
+    flex: 4;
     overflow-y: auto;
     min-height: 80px;
-    max-height: 150px;
+    max-height: 270px;
     border: 1px solid #e9ecef;
     border-radius: 4px;
     padding: 4px;

@@ -71,7 +71,6 @@ class InteractiveMap {
         const searchTerm = this.currentSearch.toLowerCase().trim();
         const filterType = this.currentFilter;
         
-        console.log(filterType);
         // Фильтрация объектов
         this.filteredObjects = this.objects.filter(obj => 
             obj.name.toLowerCase().includes(searchTerm) &&
@@ -94,7 +93,6 @@ class InteractiveMap {
     renderMapMarkers() {
         if (this.mapWidth === 0 || this.mapHeight === 0) return;
 
-        console.log('1');
         const overlay = document.getElementById('map-overlay');
         
         // Очищаем все маркеры
@@ -104,62 +102,60 @@ class InteractiveMap {
         // Убираем все классы видимости
         overlay.classList.remove('objects-visible', 'characters-visible', 'filter-active');
         
-        // Если есть активный поиск или фильтр
-        const hasActiveFilter = this.currentSearch.trim() !== '' || this.currentFilter !== 'all';
+        const hasSearch = this.currentSearch.trim() !== '';
+        const hasFilter = this.currentFilter !== 'all';
         
-        if (hasActiveFilter) {
-            overlay.classList.add('filter-active');
-                  console.log('2');
-            // Показываем только отфильтрованные маркеры
+        if (hasSearch || hasFilter) {
+            // Если есть активный поиск или фильтр - показываем ВСЕ найденные маркеры
             this.renderFilteredMarkers();
-        } else 
-            {
-            // Показываем все маркеры согласно текущему фильтру
-            if (this.currentFilter === 'all' || this.currentFilter === 'location') {
-                overlay.classList.add('objects-visible');
-                this.renderObjects();
-            }
-            
-            if (this.currentFilter === 'all' || this.currentFilter === 'character') {
-                overlay.classList.add('characters-visible');
-                this.renderCharacters();
-            }
+        } else {
+            // Если нет фильтров - показываем все маркеры
+            this.renderAllMarkers();
         }
     }
 
     renderFilteredMarkers() {
-
         const overlay = document.getElementById('map-overlay');
         
-        // Показываем отфильтрованные объекты
-        this.filteredObjects.forEach(obj => {
-                  console.log('3');
-            this.createObjectMarker(obj, overlay);
-        });
+        // Всегда показываем отфильтрованные объекты
+        if (this.filteredObjects.length > 0) {
+            overlay.classList.add('objects-visible');
+            this.filteredObjects.forEach(obj => {
+                this.createObjectMarker(obj, overlay);
+            });
+        }
         
-        // Показываем отфильтрованных персонажей
-        this.filteredCharacters.forEach(char => {
-                  console.log('4');
-            this.createCharacterMarker(char, overlay);
-        });
+        // Всегда показываем отфильтрованных персонажей
+        if (this.filteredCharacters.length > 0) {
+            overlay.classList.add('characters-visible');
+            this.filteredCharacters.forEach(char => {
+                this.createCharacterMarker(char, overlay);
+            });
+        }
     }
 
-    renderObjects() {
+    renderAllMarkers() {
         const overlay = document.getElementById('map-overlay');
-        this.objects.forEach(obj => {
-            this.createObjectMarker(obj, overlay);
-        });
-    }
-
-    renderCharacters() {
-        const overlay = document.getElementById('map-overlay');
-        this.characters.forEach(char => {
-            this.createCharacterMarker(char, overlay);
-        });
+        
+        // Показываем все объекты согласно текущему фильтру
+        if (this.currentFilter === 'all' || this.currentFilter === 'location') {
+            overlay.classList.add('objects-visible');
+            this.objects.forEach(obj => {
+                this.createObjectMarker(obj, overlay);
+            });
+        }
+        
+        // Показываем всех персонажей согласно текущему фильтру
+        if (this.currentFilter === 'all' || this.currentFilter === 'character') {
+            overlay.classList.add('characters-visible');
+            this.characters.forEach(char => {
+                this.createCharacterMarker(char, overlay);
+            });
+        }
     }
 
     createObjectMarker(obj, overlay) {
-        //  if (!obj.center) return;
+        if (!obj.center) return;
         
         const percentX = (obj.center[0] / this.mapWidth) * 100;
         const percentY = (obj.center[1] / this.mapHeight) * 100;
@@ -538,6 +534,14 @@ class InteractiveMap {
                 coords: [100, 100, 200, 200],
                 description: "Темный загадочный лес", 
                 center: [150, 150]
+            },
+            { 
+                id: 2, 
+                name: "Горная вершина (демо)", 
+                type: "location", 
+                coords: [300, 50, 400, 150], 
+                description: "Высокая гора с прекрасным видом", 
+                center: [350, 100] 
             }
         ];
     }
@@ -551,6 +555,14 @@ class InteractiveMap {
                 locationId: 1, 
                 description: "Храбрый защитник леса",
                 center: [130, 140]
+            },
+            { 
+                id: 2, 
+                name: "Маг (демо)", 
+                type: "character", 
+                locationId: 2, 
+                description: "Мудрый старец с гор",
+                center: [370, 90]
             }
         ];
     }
