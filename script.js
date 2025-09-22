@@ -4,12 +4,13 @@ class InteractiveMap {
         this.characters = [];
         this.selectedObject = null;
         this.clickHistory = [];
-        this.maxHistoryItems = 10;
-        this.isFilterActive = false;
+        this.maxHistoryItems = 8;
         this.mapWidth = 0;
         this.mapHeight = 0;
-        this.showCharacters = true;
-        this.labelPositions = []; // Для отслеживания позиций надписей
+        this.currentFilter = 'all';
+        this.currentSearch = '';
+        this.filteredObjects = [];
+        this.filteredCharacters = [];
         this.init();
     }
 
@@ -35,8 +36,7 @@ class InteractiveMap {
         this.mapHeight = mapImage.naturalHeight;
         
         this.createMapAreas();
-        this.renderObjectMarkers();
-        this.renderCharacterMarkers();
+        this.applyFilter();
     }
 
     loadData() {
@@ -56,219 +56,178 @@ class InteractiveMap {
                 console.warn('Персонажи не найдены, используем демо-данные');
                 this.loadDemoCharacters();
             }
+            
+            this.filteredObjects = [...this.objects];
+            this.filteredCharacters = [...this.characters];
+            
         } catch (error) {
             console.error('Ошибка загрузки данных:', error);
             this.loadDemoData();
         }
     }
 
-    getCharacterCoordinates(character) {
-        const location = this.objects.find(obj => obj.id === character.locationId);
-        if (!location || !location.center) return null;
+    // Основной метод фильтрации и отображения
+    applyFilter() {
+        const searchTerm = this.currentSearch.toLowerCase().trim();
+        const filterType = this.currentFilter;
         
-        const locCenterX = location.center[0];
-        const locCenterY = location.center[1];
+        // Фильтрация объектов
+        this.filteredObjects = this.objects.filter(obj => 
+            obj.name.toLowerCase().includes(searchTerm) &&
+            (filterType === 'all' || filterType === 'location')
+        );
         
-        let baseOffsetX = character.offset?.x || 0;
-        let baseOffsetY = character.offset?.y || 0;
+        // Фильтрация персонажей
+        this.filteredCharacters = this.characters.filter(char => 
+            char.name.toLowerCase().includes(searchTerm) &&
+            (filterType === 'all' || filterType === 'character')
+        );
         
-        let charX = locCenterX + baseOffsetX;
-        let charY = locCenterY + baseOffsetY;
+        // Обновляем списки
+        this.renderLists();
         
-        const margin = 15;
-        charX = Math.max(location.coords[0] + margin, Math.min(location.coords[2] - margin, charX));
-        charY = Math.max(location.coords[1] + margin, Math.min(location.coords[3] - margin, charY));
-        
-        return { x: charX, y: charY };
+        // Обновляем маркеры на карте
+        this.renderMapMarkers();
     }
 
-    // Метод для получения оптимальной позиции надписи
-    getLabelPosition(markerX, markerY, isCharacter = false) {
-        // Размеры надписей (примерные)
-        const labelWidth = isCharacter ? 60 : 80;
-        const labelHeight = isCharacter ? 18 : 20;
-        
-        // Возможные позиции относительно маркера
-        const positions = [
-            { x: 0, y: -labelHeight - 8, name: 'top' },    // сверху
-            { x: labelWidth/2 + 5, y: 0, name: 'right' },  // справа
-            { x: 0, y: labelHeight + 8, name: 'bottom' },  // снизу
-            { x: -labelWidth/2 - 5, y: 0, name: 'left' }   // слева
-        ];
-        
-        // Для персонажей предпочитаем позицию снизу, для объектов - сверху
-        const preferredIndex = isCharacter ? 2 : 0;
-        
-        // // Проверяем предпочтительную позицию сначала
-        // if (this.isPositionAvailable(markerX + positions[preferredIndex].x, markerY + positions[preferredIndex].y, labelWidth, labelHeight)) {
-        //     return positions[preferredIndex];
-        // }
-        
-        // Если предпочтительная позиция занята, проверяем остальные
-        for (let i = 0; i < positions.length; i++) {
-            if (i !== preferredIndex && this.isPositionAvailable(markerX + positions[i].x, markerY + positions[i].y, labelWidth, labelHeight)) {
-                return positions[i];
-            }
-        }
-        
-        // Если все позиции заняты, возвращаем предпочтительную
-        return positions[preferredIndex];
-    }
-
-    // Проверяем, доступна ли позиция для надписи
-    isPositionAvailable(x, y, width, height) {
-        const padding = 10; // Отступ между надписями
-        
-        for (let existingPos of this.labelPositions) {
-            if (this.checkOverlap(
-                x - padding, y - padding, width + padding * 2, height + padding * 2,
-                existingPos.x, existingPos.y, existingPos.width, existingPos.height
-            )) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    // Проверка перекрытия двух прямоугольников
-    checkOverlap(x1, y1, w1, h1, x2, y2, w2, h2) {
-        return x1 < x2 + w2 && 
-               x1 + w1 > x2 && 
-               y1 < y2 + h2 && 
-               y1 + h1 > y2;
-    }
-
-    renderObjectMarkers() {
+    renderMapMarkers() {
         if (this.mapWidth === 0 || this.mapHeight === 0) return;
 
         const overlay = document.getElementById('map-overlay');
-        const oldMarkers = overlay.querySelectorAll('.object-marker, .object-label');
+        
+        // Очищаем все маркеры
+        const oldMarkers = overlay.querySelectorAll('.object-marker, .object-label, .character-marker, .character-label');
         oldMarkers.forEach(marker => marker.remove());
         
-        this.labelPositions = []; // Сбрасываем позиции надписей
+        // Убираем все классы видимости
+        overlay.classList.remove('objects-visible', 'characters-visible', 'filter-active');
         
-        if (this.isFilterActive) {
-            overlay.classList.remove('objects-visible');
-            return;
+        // Если есть активный поиск или фильтр
+        const hasActiveFilter = this.currentSearch.trim() !== '' || this.currentFilter !== 'all';
+        
+        if (hasActiveFilter) {
+            overlay.classList.add('filter-active');
+            
+            // Показываем только отфильтрованные маркеры
+            this.renderFilteredMarkers();
+        } else {
+            // Показываем все маркеры согласно текущему фильтру
+            if (this.currentFilter === 'all' || this.currentFilter === 'location') {
+                overlay.classList.add('objects-visible');
+                this.renderObjects();
+            }
+            
+            if (this.currentFilter === 'all' || this.currentFilter === 'character') {
+                overlay.classList.add('characters-visible');
+                this.renderCharacters();
+            }
         }
+    }
+
+    renderFilteredMarkers() {
+        const overlay = document.getElementById('map-overlay');
         
-        overlay.classList.add('objects-visible');
+        // Показываем отфильтрованные объекты
+        this.filteredObjects.forEach(obj => {
+            this.createObjectMarker(obj, overlay);
+        });
         
+        // Показываем отфильтрованных персонажей
+        this.filteredCharacters.forEach(char => {
+            this.createCharacterMarker(char, overlay);
+        });
+    }
+
+    renderObjects() {
+        const overlay = document.getElementById('map-overlay');
         this.objects.forEach(obj => {
-            if (obj.center) {
-                const percentX = (obj.center[0] / this.mapWidth) * 100;
-                const percentY = (obj.center[1] / this.mapHeight) * 100;
-                
-                // Маркер объекта
-                const marker = document.createElement('div');
-                marker.className = 'object-marker';
-                marker.style.left = `${percentX}%`;
-                marker.style.top = `${percentY}%`;
-                marker.dataset.id = obj.id;
-                
-                // Надпись объекта
-                const label = document.createElement('div');
-                label.className = 'object-label';
-                label.textContent = obj.name;
-                
-                // Получаем оптимальную позицию для надписи
-                const labelPos = this.getLabelPosition(percentX, percentY, false);
-                const labelWidth = 80;
-                const labelHeight = 20;
-                
-                label.style.left = `${percentX}%`;
-                label.style.top = `${percentY}%`;
-                label.style.transform = `translate(${labelPos.x}px, ${labelPos.y}px)`;
-                
-                // Сохраняем позицию надписи
-                this.labelPositions.push({
-                    x: percentX + labelPos.x,
-                    y: percentY + labelPos.y,
-                    width: labelWidth,
-                    height: labelHeight,
-                    type: 'object'
-                });
-                
-                overlay.appendChild(marker);
-                overlay.appendChild(label);
-            }
+            this.createObjectMarker(obj, overlay);
         });
     }
 
-    renderCharacterMarkers() {
-        if (this.mapWidth === 0 || this.mapHeight === 0) return;
-
+    renderCharacters() {
         const overlay = document.getElementById('map-overlay');
-        const oldMarkers = overlay.querySelectorAll('.character-marker, .character-label');
-        oldMarkers.forEach(marker => marker.remove());
-        
-        if (this.isFilterActive || !this.showCharacters) {
-            overlay.classList.remove('characters-visible');
-            return;
-        }
-        
-        overlay.classList.add('characters-visible');
-        
-        this.characters.forEach(character => {
-            const coords = this.getCharacterCoordinates(character);
-            if (!coords) return;
-            
-            const percentX = (coords.x / this.mapWidth) * 100;
-            const percentY = (coords.y / this.mapHeight) * 100;
-            
-            // Маркер персонажа
-            const marker = document.createElement('div');
-            marker.className = 'character-marker';
-            marker.style.left = `${percentX}%`;
-            marker.style.top = `${percentY}%`;
-            marker.dataset.id = character.id;
-            marker.title = `${character.name} (${this.getLocationName(character.locationId)})`;
-            
-            // Надпись персонажа
-            const label = document.createElement('div');
-            label.className = 'character-label';
-            label.textContent = character.name;
-            
-            // Получаем оптимальную позицию для надписи
-            const labelPos = this.getLabelPosition(percentX, percentY, true);
-            const labelWidth = 60;
-            const labelHeight = 18;
-            
-            label.style.left = `${percentX}%`;
-            label.style.top = `${percentY}%`;
-            label.style.transform = `translate(${labelPos.x}px, ${labelPos.y}px)`;
-            label.title = `${character.name} - ${character.description}`;
-            
-            // Сохраняем позицию надписи
-            this.labelPositions.push({
-                x: percentX + labelPos.x,
-                y: percentY + labelPos.y,
-                width: labelWidth,
-                height: labelHeight,
-                type: 'character'
-            });
-            
-            const showCharacterInfo = (e) => {
-                e.stopPropagation();
-                this.showCharacterDetails(character);
-            };
-            
-            marker.addEventListener('click', showCharacterInfo);
-            label.addEventListener('click', showCharacterInfo);
-            
-            marker.addEventListener('mouseenter', () => this.highlightCharacter(character.id));
-            marker.addEventListener('mouseleave', () => this.removeHighlight());
-            label.addEventListener('mouseenter', () => this.highlightCharacter(character.id));
-            label.addEventListener('mouseleave', () => this.removeHighlight());
-            
-            overlay.appendChild(marker);
-            overlay.appendChild(label);
+        this.characters.forEach(char => {
+            this.createCharacterMarker(char, overlay);
         });
     }
 
-    getLocationName(locationId) {
-        const location = this.objects.find(obj => obj.id === locationId);
-        return location ? location.name : 'Неизвестно';
+    createObjectMarker(obj, overlay) {
+        if (!obj.center) return;
+        
+        const percentX = (obj.center[0] / this.mapWidth) * 100;
+        const percentY = (obj.center[1] / this.mapHeight) * 100;
+        
+        // Маркер объекта
+        const marker = document.createElement('div');
+        marker.className = 'object-marker';
+        marker.style.left = `${percentX}%`;
+        marker.style.top = `${percentY}%`;
+        marker.dataset.id = obj.id;
+        
+        // Надпись объекта (справа от маркера)
+        const label = document.createElement('div');
+        label.className = 'object-label';
+        label.textContent = obj.name;
+        label.style.left = `${percentX}%`;
+        label.style.top = `${percentY}%`;
+        
+        // Обработчики событий
+        marker.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showObjectDetails(obj);
+        });
+        
+        label.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showObjectDetails(obj);
+        });
+        
+        marker.addEventListener('mouseenter', () => this.highlightArea(obj.id));
+        marker.addEventListener('mouseleave', () => this.removeHighlight());
+        
+        overlay.appendChild(marker);
+        overlay.appendChild(label);
+    }
+
+    createCharacterMarker(character, overlay) {
+        if (!character.center) return;
+        
+        const percentX = (character.center[0] / this.mapWidth) * 100;
+        const percentY = (character.center[1] / this.mapHeight) * 100;
+        
+        // Маркер персонажа
+        const marker = document.createElement('div');
+        marker.className = 'character-marker';
+        marker.style.left = `${percentX}%`;
+        marker.style.top = `${percentY}%`;
+        marker.dataset.id = character.id;
+        marker.title = `${character.name}`;
+        
+        // Надпись персонажа (справа от маркера)
+        const label = document.createElement('div');
+        label.className = 'character-label';
+        label.textContent = character.name;
+        label.style.left = `${percentX}%`;
+        label.style.top = `${percentY}%`;
+        label.title = `${character.name} - ${character.description}`;
+        
+        // Обработчики событий
+        const showCharacterInfo = (e) => {
+            e.stopPropagation();
+            this.showCharacterDetails(character);
+        };
+        
+        marker.addEventListener('click', showCharacterInfo);
+        label.addEventListener('click', showCharacterInfo);
+        
+        marker.addEventListener('mouseenter', () => this.highlightCharacter(character.id));
+        marker.addEventListener('mouseleave', () => this.removeHighlight());
+        label.addEventListener('mouseenter', () => this.highlightCharacter(character.id));
+        label.addEventListener('mouseleave', () => this.removeHighlight());
+        
+        overlay.appendChild(marker);
+        overlay.appendChild(label);
     }
 
     highlightCharacter(characterId) {
@@ -314,6 +273,7 @@ class InteractiveMap {
     setupEventListeners() {
         const mapWrapper = document.querySelector('.map-wrapper');
 
+        // Отслеживание координат
         mapWrapper.addEventListener('mousemove', (e) => {
             this.updateCursorCoordinates(e);
         });
@@ -327,16 +287,20 @@ class InteractiveMap {
             this.handleRightClick(e);
         });
 
+        // Поиск и фильтры
         const searchInput = document.getElementById('search');
         searchInput.addEventListener('input', (e) => {
-            this.handleFilterChange(e.target.value);
+            this.currentSearch = e.target.value;
+            this.applyFilter();
         });
 
         const filterType = document.getElementById('filter-type');
         filterType.addEventListener('change', (e) => {
-            this.handleFilterChange(searchInput.value, e.target.value);
+            this.currentFilter = e.target.value;
+            this.applyFilter();
         });
 
+        // Закрытие попапа
         document.querySelector('.close').addEventListener('click', () => {
             this.hidePopup();
         });
@@ -348,8 +312,7 @@ class InteractiveMap {
         });
 
         window.addEventListener('resize', () => {
-            this.renderObjectMarkers();
-            this.renderCharacterMarkers();
+            this.renderMapMarkers();
         });
     }
 
@@ -380,8 +343,6 @@ class InteractiveMap {
         const coords = this.getAbsoluteCoordinates(e);
         this.showClickMarker(coords.screen.x, coords.screen.y);
         this.addToClickHistory(coords.absolute.x, coords.absolute.y, 'Левый клик');
-        
-        console.log(`Абсолютные координаты клика: X: ${coords.absolute.x}, Y: ${coords.absolute.y}`);
     }
 
     handleRightClick(e) {
@@ -391,8 +352,6 @@ class InteractiveMap {
         const coords = this.getAbsoluteCoordinates(e);
         this.showClickMarker(coords.screen.x, coords.screen.y);
         this.addToClickHistory(coords.absolute.x, coords.absolute.y, 'Правый клик');
-        
-        console.log(`Абсолютные координаты правого клика: X: ${coords.absolute.x}, Y: ${coords.absolute.y}`);
     }
 
     showClickMarker(x, y) {
@@ -433,17 +392,12 @@ class InteractiveMap {
             return;
         }
         
-        historyContainer.innerHTML = `<div class="click-item" style="background: #e9ecef; font-weight: bold;">
-            Размер карты: ${this.mapWidth}×${this.mapHeight} px
-        </div>`;
-        
         this.clickHistory.forEach((click, index) => {
             const item = document.createElement('div');
             item.className = 'click-item';
             item.innerHTML = `
                 <strong>${click.timestamp}</strong><br>
-                ${click.type}: X: ${click.x}, Y: ${click.y}<br>
-                <small>Для использования: [${click.x}, ${click.y}]</small>
+                ${click.type}: X: ${click.x}, Y: ${click.y}
             `;
             
             item.addEventListener('click', () => {
@@ -457,20 +411,6 @@ class InteractiveMap {
         });
     }
 
-    handleFilterChange(searchTerm, filterType = null) {
-        if (!filterType) {
-            filterType = document.getElementById('filter-type').value;
-        }
-        
-        const hasSearch = searchTerm.trim().length > 0;
-        const hasTypeFilter = filterType !== 'all';
-        this.isFilterActive = hasSearch || hasTypeFilter;
-        
-        this.renderObjectMarkers();
-        this.renderCharacterMarkers();
-        this.filterItems(searchTerm, filterType);
-    }
-
     renderLists() {
         this.renderObjectsList();
         this.renderCharactersList();
@@ -480,11 +420,14 @@ class InteractiveMap {
         const container = document.getElementById('objects-container');
         container.innerHTML = '';
 
-        this.objects.forEach(obj => {
+        this.filteredObjects.forEach(obj => {
             const li = document.createElement('li');
             li.textContent = obj.name;
             li.dataset.id = obj.id;
-            li.addEventListener('click', () => this.showObjectDetails(obj));
+            li.addEventListener('click', () => {
+                this.showObjectDetails(obj);
+                this.highlightArea(obj.id);
+            });
             container.appendChild(li);
         });
     }
@@ -493,11 +436,15 @@ class InteractiveMap {
         const container = document.getElementById('characters-container');
         container.innerHTML = '';
 
-        this.characters.forEach(char => {
+        this.filteredCharacters.forEach(char => {
             const li = document.createElement('li');
             li.textContent = char.name;
             li.dataset.id = char.id;
-            li.addEventListener('click', () => this.showCharacterDetails(char));
+            li.addEventListener('click', () => {
+                this.showCharacterDetails(char);
+                const location = this.objects.find(obj => obj.id === char.locationId);
+                if (location) this.highlightArea(location.id);
+            });
             container.appendChild(li);
         });
     }
@@ -576,44 +523,6 @@ class InteractiveMap {
         this.selectedObject = null;
     }
 
-    filterItems(searchTerm, filterType = 'all') {
-        const filteredObjects = this.objects.filter(obj => 
-            obj.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-            (filterType === 'all' || filterType === 'location')
-        );
-        
-        const filteredCharacters = this.characters.filter(char => 
-            char.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-            (filterType === 'all' || filterType === 'character')
-        );
-
-        this.renderFilteredLists(filteredObjects, filteredCharacters);
-    }
-
-    renderFilteredLists(objects, characters) {
-        const objectsContainer = document.getElementById('objects-container');
-        const charactersContainer = document.getElementById('characters-container');
-        
-        objectsContainer.innerHTML = '';
-        charactersContainer.innerHTML = '';
-
-        objects.forEach(obj => {
-            const li = document.createElement('li');
-            li.textContent = obj.name;
-            li.dataset.id = obj.id;
-            li.addEventListener('click', () => this.showObjectDetails(obj));
-            objectsContainer.appendChild(li);
-        });
-
-        characters.forEach(char => {
-            const li = document.createElement('li');
-            li.textContent = char.name;
-            li.dataset.id = char.id;
-            li.addEventListener('click', () => this.showCharacterDetails(char));
-            charactersContainer.appendChild(li);
-        });
-    }
-
     loadDemoLocations() {
         this.objects = [
             { 
@@ -623,14 +532,6 @@ class InteractiveMap {
                 coords: [100, 100, 200, 200],
                 description: "Темный загадочный лес", 
                 center: [150, 150]
-            },
-            { 
-                id: 2, 
-                name: "Горная вершина (демо)", 
-                type: "location", 
-                coords: [300, 50, 400, 150], 
-                description: "Высокая гора с прекрасным видом", 
-                center: [350, 100] 
             }
         ];
     }
@@ -643,15 +544,7 @@ class InteractiveMap {
                 type: "character", 
                 locationId: 1, 
                 description: "Храбрый защитник леса",
-                offset: { x: -20, y: -10 }
-            },
-            { 
-                id: 2, 
-                name: "Маг (демо)", 
-                type: "character", 
-                locationId: 2, 
-                description: "Мудрый старец с гор",
-                offset: { x: 15, y: -5 }
+                center: [130, 140]
             }
         ];
     }
